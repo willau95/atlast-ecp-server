@@ -6,6 +6,9 @@ Auth: X-ECP-Webhook-Token header
 Fail-Open: webhook failure never blocks anchoring.
 """
 
+import hashlib
+import hmac
+import json as json_lib
 import httpx
 import structlog
 from datetime import datetime, timezone
@@ -49,9 +52,18 @@ async def fire_attestation_webhook(
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
 
+    # HMAC-SHA256 signature for payload integrity
+    payload_bytes = json_lib.dumps(payload, sort_keys=True).encode()
+    signature = hmac.new(
+        settings.ECP_WEBHOOK_TOKEN.encode(),
+        payload_bytes,
+        hashlib.sha256,
+    ).hexdigest()
+
     headers = {
         "Content-Type": "application/json",
         "X-ECP-Webhook-Token": settings.ECP_WEBHOOK_TOKEN,
+        "X-ECP-Signature": f"sha256={signature}",
     }
 
     try:

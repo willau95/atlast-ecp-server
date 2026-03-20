@@ -153,12 +153,14 @@ from .routes.discovery import router as discovery_router
 from .routes.anchor import router as anchor_router
 from .routes.cron import router as cron_router
 from .routes.verify import router as verify_router
+from .routes.attestations import router as attestations_router
 
 app.include_router(health_router)
 app.include_router(discovery_router)
 app.include_router(anchor_router)
 app.include_router(cron_router)
 app.include_router(verify_router)
+app.include_router(attestations_router)
 
 # Init stats tracking
 from .routes.verify import init_stats
