@@ -9,7 +9,7 @@ Handles:
 - Health + metrics
 """
 
-import asyncio
+import uuid
 import structlog
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -86,12 +86,15 @@ async def lifespan(app: FastAPI):
         stub=settings.EAS_STUB_MODE,
         anchor_interval=f"{interval}min",
     )
+    # Run first anchor 60s after startup, then every interval
+    from datetime import timedelta
+    first_run = datetime.now(timezone.utc) + timedelta(seconds=60)
     scheduler.add_job(
         _scheduled_anchor,
         "interval",
         minutes=interval,
         id="anchor_cron",
-        next_run_time=None,  # Don't run immediately on startup
+        next_run_time=first_run,
     )
     scheduler.start()
     logger.info("cron_started", interval_minutes=interval)
@@ -129,7 +132,6 @@ async def security_headers(request: Request, call_next):
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     # X-Request-ID
-    import uuid
     req_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
     response.headers["X-Request-ID"] = req_id
     return response

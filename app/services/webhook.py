@@ -52,8 +52,10 @@ async def fire_attestation_webhook(
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
 
+    # Serialize payload once — use same bytes for signing and sending
+    payload_bytes = json_lib.dumps(payload, separators=(",", ":"), sort_keys=True).encode()
+
     # HMAC-SHA256 signature for payload integrity
-    payload_bytes = json_lib.dumps(payload, sort_keys=True).encode()
     signature = hmac.new(
         settings.ECP_WEBHOOK_TOKEN.encode(),
         payload_bytes,
@@ -68,9 +70,11 @@ async def fire_attestation_webhook(
 
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.post(url, json=payload, headers=headers)
+            resp = await client.post(url, content=payload_bytes, headers=headers)
             resp.raise_for_status()
             logger.info("ecp_webhook_sent", batch_id=batch_id, status=resp.status_code)
+            from ..routes.verify import record_webhook_sent
+            record_webhook_sent()
             return True
     except Exception as e:
         logger.warning("ecp_webhook_failed", batch_id=batch_id, error=str(e))

@@ -60,6 +60,10 @@ async def _anchor_pending():
             logger.warning("anchor_batch_failed", batch_id=batch.get("batch_id"), error=str(e))
             errors += 1
 
+    # Update global stats
+    from .verify import record_anchor_stats
+    record_anchor_stats(anchored, errors)
+
     logger.info("anchor_cron_done", processed=len(batches), anchored=anchored, errors=errors)
     return {"processed": len(batches), "anchored": anchored, "errors": errors}
 

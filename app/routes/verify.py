@@ -24,21 +24,35 @@ class MerkleVerifyRequest(BaseModel):
     record_hashes: list[str]
 
 
+def _sha256(data: str) -> str:
+    """SHA-256 with sha256: prefix — matches SDK and backend crypto.py."""
+    return "sha256:" + hashlib.sha256(data.encode()).hexdigest()
+
+
 def _compute_merkle_root(hashes: list[str]) -> str:
-    """Recompute Merkle root from leaf hashes (SHA-256, sorted pairs)."""
+    """
+    Recompute Merkle root from leaf hashes.
+    Algorithm matches atlast-ecp SDK exactly:
+    - No sorting (order-preserving)
+    - sha256: prefix throughout
+    - Odd layers: duplicate last element
+    """
     if not hashes:
-        return ""
-    layer = sorted(hashes)
-    while len(layer) > 1:
+        return _sha256("empty")
+
+    if len(hashes) == 1:
+        return hashes[0]
+
+    current = list(hashes)
+    while len(current) > 1:
+        if len(current) % 2 == 1:
+            current.append(current[-1])  # duplicate last for odd length
         next_layer = []
-        for i in range(0, len(layer), 2):
-            if i + 1 < len(layer):
-                combined = layer[i] + layer[i + 1]
-            else:
-                combined = layer[i] + layer[i]  # duplicate odd leaf
-            next_layer.append(hashlib.sha256(combined.encode()).hexdigest())
-        layer = next_layer
-    return layer[0]
+        for i in range(0, len(current), 2):
+            combined = _sha256(current[i] + current[i + 1])
+            next_layer.append(combined)
+        current = next_layer
+    return current[0]
 
 
 @router.post("/v1/verify/merkle")
