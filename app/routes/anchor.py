@@ -2,6 +2,7 @@
 Anchor routes — manual trigger + cron-compatible endpoint.
 """
 
+import secrets
 from fastapi import APIRouter, Header, HTTPException
 import structlog
 
@@ -68,7 +69,7 @@ async def anchor_now(x_internal_token: str = Header(None, alias="X-Internal-Toke
     """Manual trigger for anchoring. Can also be called by Railway cron."""
     # Allow unauthenticated in dev, require token in production
     if settings.ENVIRONMENT == "production":
-        if x_internal_token != settings.LLACHAT_INTERNAL_TOKEN:
+        if not x_internal_token or not secrets.compare_digest(x_internal_token, settings.LLACHAT_INTERNAL_TOKEN):
             raise HTTPException(status_code=401, detail="Invalid internal token")
 
     result = await _anchor_pending()
@@ -76,8 +77,12 @@ async def anchor_now(x_internal_token: str = Header(None, alias="X-Internal-Toke
 
 
 @router.get("/v1/internal/anchor-status")
-async def anchor_status():
-    """Check anchor service status (no auth, read-only)."""
+async def anchor_status(x_internal_token: str = Header(None, alias="X-Internal-Token")):
+    """Check anchor service status."""
+    if settings.ENVIRONMENT == "production":
+        if not x_internal_token or not secrets.compare_digest(x_internal_token, settings.LLACHAT_INTERNAL_TOKEN):
+            raise HTTPException(status_code=401, detail="Invalid internal token")
+
     return {
         "service": "ecp-anchor",
         "eas_chain": settings.EAS_CHAIN,

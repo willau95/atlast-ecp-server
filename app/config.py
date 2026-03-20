@@ -1,6 +1,7 @@
 """ECP Server Configuration"""
 import os
 
+
 class Settings:
     # EAS
     EAS_PRIVATE_KEY: str = os.getenv("EAS_PRIVATE_KEY", "")
@@ -22,5 +23,17 @@ class Settings:
     # Server
     PORT: int = int(os.getenv("PORT", "8080"))
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "production")
+
+    # Cron
+    ANCHOR_INTERVAL_MINUTES: int = int(os.getenv("ANCHOR_INTERVAL_MINUTES", "60"))
+
+    # Monitoring
+    SENTRY_DSN: str = os.getenv("SENTRY_DSN", "")
+
+    # CORS
+    CORS_ORIGINS: list[str] = os.getenv(
+        "CORS_ORIGINS", "https://llachat.com,https://www.llachat.com,https://weba0.com,https://www.weba0.com"
+    ).split(",")
+
 
 settings = Settings()
