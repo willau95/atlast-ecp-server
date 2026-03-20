@@ -168,13 +168,16 @@ def test_cron_status():
 
 # ── F4: Verification ───────────────────────────────────────────────────────
 
-@test("F4.1 Merkle verify — valid tree")
+@test("F4.1 Merkle verify — valid tree (SDK-compatible)")
 def test_merkle_valid():
-    # Create a simple 2-leaf tree
-    h1 = hashlib.sha256(b"record1").hexdigest()
-    h2 = hashlib.sha256(b"record2").hexdigest()
-    leaves = sorted([h1, h2])
-    root = hashlib.sha256((leaves[0] + leaves[1]).encode()).hexdigest()
+    # Use sha256: prefix to match SDK convention
+    def sha256_prefixed(data: str) -> str:
+        return "sha256:" + hashlib.sha256(data.encode()).hexdigest()
+
+    h1 = sha256_prefixed("record1")
+    h2 = sha256_prefixed("record2")
+    # Root = sha256:(h1 + h2) — no sorting, order-preserving like SDK
+    root = sha256_prefixed(h1 + h2)
 
     r = httpx.post(
         f"{ECP_SERVER}/v1/verify/merkle",
@@ -183,7 +186,7 @@ def test_merkle_valid():
     )
     assert r.status_code == 200
     data = r.json()
-    assert data["valid"] is True
+    assert data["valid"] is True, f"Expected valid but got {data}"
     return data
 
 @test("F4.2 Merkle verify — invalid root")
